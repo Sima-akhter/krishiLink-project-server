@@ -25,6 +25,15 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect();
 
+   const db = client.db('krishiLink-project');
+   const krishiLinkCollection = db.collection('krishiLink');
+
+   app.get('/krishiLink', async(req, res)=>{
+   const result =await krishiLinkCollection.find().toArray()
+//    console.log(result)
+
+    res.send(result)
+   })
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
