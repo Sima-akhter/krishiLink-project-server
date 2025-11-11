@@ -1,7 +1,7 @@
 
 const express = require('express');
 const cors = require('cors');
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const port = 3000
 
@@ -30,10 +30,27 @@ async function run() {
 
    app.get('/krishiLink', async(req, res)=>{
    const result =await krishiLinkCollection.find().toArray()
-//    console.log(result)
-
     res.send(result)
-   })
+   });
+
+    app.get('/krishiLink/:id', async(req, res)=>{
+        const {id} = req.params
+        console.log(id)
+        const result =await krishiLinkCollection.findOne({_id: new ObjectId(id)})
+        res.send({
+            success: true,
+            result
+        })
+    })
+
+   app.post('/krishiLink', async(req, res)=>{
+    const data = req.body
+    const result = await krishiLinkCollection.insertOne(data)
+    res.send({
+        success:true,
+        result
+    })
+   });
 
     await client.db("admin").command({ ping: 1 });
     console.log("Pinged your deployment. You successfully connected to MongoDB!");
