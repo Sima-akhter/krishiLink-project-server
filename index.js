@@ -68,20 +68,57 @@ async function run() {
 
         })
 
-        app.post('/krishiLink/:id/interest', async(req, res)=>{
+        app.post('/krishiLink/:id/interest', async (req, res) => {
             const id = req.params.id
             const newInterest = req.body
 
+            const interestId = new ObjectId();
+
+
+            const interestWithId = { _id: interestId, ...newInterest }
+
             const result = await krishiLinkCollection.updateOne(
-                {_id : new ObjectId(id)},
+                { _id: new ObjectId(id) },
                 {
-                    $push: { interest: newInterest }
+                    $push: { interest: interestWithId }
                 }
             )
             console.log("MongoDB Update Result:", result)
             res.send(result)
-            
+
         })
+
+        
+        app.get('/krishiLink/:id/received-interests', (req, res) => {
+            const { id } = req.params; 
+            const email = req.query.email; 
+
+            
+            krishiLinkCollection.findOne({
+                _id: new ObjectId(id),
+                'owner.ownerEmail': email 
+            }).then(product => {
+                if (!product) {
+                    return res.status(404).send({
+                        success: false,
+                        message: 'Product not found or you are not the owner of this product.'
+                    });
+                }
+
+                
+                res.send({
+                    success: true,
+                    interests: product.interest || []
+                });
+            }).catch(err => {
+                console.error(err);
+                res.status(500).send({
+                    success: false,
+                    message: 'Error fetching received interests.'
+                });
+            });
+        });
+
 
         app.get('/latestKrishi', async (req, res) => {
             const result = await krishiLinkCollection.find().sort({ create_at: -1 }).limit(6).toArray()
@@ -95,7 +132,14 @@ async function run() {
         })
 
         app.delete('/krishiLink/:id', async (req, res) => {
-            
+          const {id} = req.params
+        //   const objectid = new ObjectId(id)
+        //   const filter = {_id: ObjectId}
+             const result =await krishiLinkCollection.deleteOne({_id: new ObjectId(id)})
+          res.send({
+            success:true,
+            result
+          })
         })
 
 
