@@ -68,6 +68,21 @@ async function run() {
 
         })
 
+        app.post('/krishiLink/:id/interest', async(req, res)=>{
+            const id = req.params.id
+            const newInterest = req.body
+
+            const result = await krishiLinkCollection.updateOne(
+                {_id : new ObjectId(id)},
+                {
+                    $push: { interest: newInterest }
+                }
+            )
+            console.log("MongoDB Update Result:", result)
+            res.send(result)
+            
+        })
+
         app.get('/latestKrishi', async (req, res) => {
             const result = await krishiLinkCollection.find().sort({ create_at: -1 }).limit(6).toArray()
             res.send(result)
@@ -75,9 +90,15 @@ async function run() {
 
         app.get('/my-posted', async (req, res) => {
             const email = req.query.email
-            const result = await krishiLinkCollection.find({'owner.ownerEmail':email}).toArray()
+            const result = await krishiLinkCollection.find({ 'owner.ownerEmail': email }).toArray()
             res.send(result)
         })
+
+        app.delete('/krishiLink/:id', async (req, res) => {
+            
+        })
+
+
 
         await client.db("admin").command({ ping: 1 });
         console.log("Pinged your deployment. You successfully connected to MongoDB!");
