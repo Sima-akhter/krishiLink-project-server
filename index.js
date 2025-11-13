@@ -69,35 +69,60 @@ async function run() {
         })
 
         app.post('/krishiLink/:id/interest', async (req, res) => {
-            const id = req.params.id
-            const newInterest = req.body
+            const id = req.params.id;
+            const newInterest = req.body;
 
-            const interestId = new ObjectId();
+            try {
+                
+                const product = await krishiLinkCollection.findOne({ _id: new ObjectId(id) });
 
-
-            const interestWithId = { _id: interestId, ...newInterest }
-
-            const result = await krishiLinkCollection.updateOne(
-                { _id: new ObjectId(id) },
-                {
-                    $push: { interest: interestWithId }
+                if (!product) {
+                    return res.status(404).send({ success: false, message: 'Product not found.' });
                 }
-            )
-            console.log("MongoDB Update Result:", result)
-            res.send(result)
 
-        })
+                
+                const alreadyInterested = product.interest?.some(
+                    (item) => item.userEmail === newInterest.userEmail
+                );
 
-        
+                if (alreadyInterested) {
+                    return res.send({
+                        success: false,
+                        message: 'You have already submitted an interest for this product.'
+                    });
+                }
+
+               
+                const interestId = new ObjectId();
+                const interestWithId = { _id: interestId, ...newInterest };
+
+                const result = await krishiLinkCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    { $push: { interest: interestWithId } }
+                );
+
+                res.send({
+                    success: true,
+                    modifiedCount: result.modifiedCount,
+                    message: 'Interest submitted successfully.'
+                });
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ success: false, message: 'Error submitting interest.' });
+            }
+        });
+
+
+
         app.get('/krishiLink/:id/received-interests', (req, res) => {
-            const { id } = req.params; 
-            const email = req.query.email; 
+            const { id } = req.params;
+            const email = req.query.email;
 
             //const result = await
-            
+
             krishiLinkCollection.findOne({
                 _id: new ObjectId(id),
-                'owner.ownerEmail': email 
+                'owner.ownerEmail': email
             }).then(product => {
                 if (!product) {
                     return res.status(404).send({
@@ -106,7 +131,7 @@ async function run() {
                     });
                 }
 
-                
+
                 res.send({
                     success: true,
                     interests: product.interest || []
@@ -132,9 +157,9 @@ async function run() {
             res.send(result)
         })
 
-        app.patch('/krishiLink/:id', async(req, res)=>{
+        app.patch('/krishiLink/:id', async (req, res) => {
             const id = req.params.id
-            const query = {_id: new ObjectId(id)}
+            const query = { _id: new ObjectId(id) }
             const updatedFileds = req.body
             const updatedData = {
                 $set: updatedFileds
@@ -144,14 +169,14 @@ async function run() {
         })
 
         app.delete('/krishiLink/:id', async (req, res) => {
-          const {id} = req.params
-        //   const objectid = new ObjectId(id)
-        //   const filter = {_id: ObjectId}
-             const result =await krishiLinkCollection.deleteOne({_id: new ObjectId(id)})
-          res.send({
-            success:true,
-            result
-          })
+            const { id } = req.params
+            //   const objectid = new ObjectId(id)
+            //   const filter = {_id: ObjectId}
+            const result = await krishiLinkCollection.deleteOne({ _id: new ObjectId(id) })
+            res.send({
+                success: true,
+                result
+            })
         })
 
 
