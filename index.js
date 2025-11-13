@@ -73,14 +73,14 @@ async function run() {
             const newInterest = req.body;
 
             try {
-                
+
                 const product = await krishiLinkCollection.findOne({ _id: new ObjectId(id) });
 
                 if (!product) {
                     return res.status(404).send({ success: false, message: 'Product not found.' });
                 }
 
-                
+
                 const alreadyInterested = product.interest?.some(
                     (item) => item.userEmail === newInterest.userEmail
                 );
@@ -92,7 +92,7 @@ async function run() {
                     });
                 }
 
-               
+
                 const interestId = new ObjectId();
                 const interestWithId = { _id: interestId, ...newInterest };
 
@@ -111,6 +111,56 @@ async function run() {
                 res.status(500).send({ success: false, message: 'Error submitting interest.' });
             }
         });
+
+
+
+        app.put('/krishiLink/:id/interest-status', async (req, res) => {
+            const { id } = req.params; 
+            const { interestId, status } = req.body;
+
+            try {
+                const product = await krishiLinkCollection.findOne({ _id: new ObjectId(id) });
+                if (!product) return res.status(404).send({ success: false, message: "Crop not found" });
+
+                
+                const interestIndex = product.interest.findIndex(
+                    (item) => item._id.toString() === interestId
+                );
+                if (interestIndex === -1)
+                    return res.status(404).send({ success: false, message: "Interest not found" });
+
+                
+                product.interest[interestIndex].status = status;
+
+             
+                if (status === "accepted") {
+                    const interestedQty = Number(product.interest[interestIndex].quantity);
+                    product.quantity = String(Math.max(0, Number(product.quantity) - interestedQty));
+                }
+
+               
+                const result = await krishiLinkCollection.updateOne(
+                    { _id: new ObjectId(id) },
+                    {
+                        $set: {
+                            interest: product.interest,
+                            quantity: product.quantity
+                        }
+                    }
+                );
+
+                res.send({
+                    success: true,
+                    message: `Interest ${status} successfully`,
+                    modifiedCount: result.modifiedCount,
+                    newQuantity: product.quantity
+                });
+            } catch (error) {
+                console.error(error);
+                res.status(500).send({ success: false, message: "Error updating interest status" });
+            }
+        });
+
 
 
 
