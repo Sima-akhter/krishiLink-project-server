@@ -93,6 +93,7 @@ async function run() {
             const { id } = req.params; 
             const email = req.query.email; 
 
+            //const result = await
             
             krishiLinkCollection.findOne({
                 _id: new ObjectId(id),
@@ -128,6 +129,17 @@ async function run() {
         app.get('/my-posted', async (req, res) => {
             const email = req.query.email
             const result = await krishiLinkCollection.find({ 'owner.ownerEmail': email }).toArray()
+            res.send(result)
+        })
+
+        app.patch('/krishiLink/:id', async(req, res)=>{
+            const id = req.params.id
+            const query = {_id: new ObjectId(id)}
+            const updatedFileds = req.body
+            const updatedData = {
+                $set: updatedFileds
+            }
+            const result = await krishiLinkCollection.updateOne(query, updatedData)
             res.send(result)
         })
 
