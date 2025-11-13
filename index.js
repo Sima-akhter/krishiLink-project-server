@@ -1,6 +1,7 @@
 
 const express = require('express');
 const cors = require('cors');
+require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express()
 const port = 3000
@@ -8,8 +9,7 @@ const port = 3000
 app.use(cors());
 app.use(express.json())
 
-
-const uri = "mongodb+srv://krishiLink:DQx9dJnoYmoT7TiA@programming-hero.ifoutmp.mongodb.net/?appName=programming-hero";
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@programming-hero.ifoutmp.mongodb.net/?appName=programming-hero`
 
 // Create a MongoClient with a MongoClientOptions object to set the Stable API version
 const client = new MongoClient(uri, {
@@ -167,8 +167,6 @@ async function run() {
         app.get('/krishiLink/:id/received-interests', (req, res) => {
             const { id } = req.params;
             const email = req.query.email;
-
-            //const result = await
 
             krishiLinkCollection.findOne({
                 _id: new ObjectId(id),
