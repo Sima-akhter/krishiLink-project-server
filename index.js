@@ -23,10 +23,159 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect();
 
         const db = client.db('krishiLink-project');
         const krishiLinkCollection = db.collection('krishiLink');
+        const userCollection = db.collection("users");
+        // const productCollection = db.collection("products");
+
+         //================= user api ====================//
+    app.get("/users",  async (req, res) => {
+      try {
+        const currentEmail = req.query.currentEmail;
+        const limit = parseInt(req.query.limit) || 50;
+
+        const query = currentEmail ? { email: { $ne: currentEmail } } : {};
+
+        const users = await userCollection
+          .find(query, { projection: { password: 0 } })
+          .limit(limit)
+          .toArray();
+
+        res.status(200).send(users);
+      } catch (error) {
+        console.error("Get users error:", error);
+        res.status(500).send({ message: "Failed to fetch users" });
+      }
+    });
+
+    app.get("/users/:email",  async (req, res) => {
+      try {
+        const email = req.params.email;
+
+        if (!email) {
+          return res.status(400).send({ message: "Email is required" });
+        }
+
+        const user = await userCollection.findOne({ email });
+
+        if (!user) {
+          return res.status(404).send({ message: "User not found" });
+        }
+
+        res.send(user);
+      } catch (error) {
+        console.error("Get user error:", error);
+        res.status(500).send({ message: "Failed to fetch user" });
+      }
+    });
+
+    app.post("/users",  async (req, res) => {
+      try {
+        const userData = req.body;
+
+        if (!userData?.email) {
+          return res.status(400).send({
+            success: false,
+            message: "Email is required",
+          });
+        }
+        const existingUser = await userCollection.findOne({
+          email: userData.email,
+        });
+        if (existingUser) {
+          await userCollection.updateOne(
+            { email: userData.email },
+            {
+              $set: {
+                lastLoginAt: new Date(),
+              },
+            }
+          );
+          return res.status(200).send({
+            success: true,
+            message: "User already exists, login date updated",
+          });
+        }
+        const newUser = {
+          ...userData,
+          role: "user",
+          createdAt: new Date(),
+        };
+        const result = await userCollection.insertOne(newUser);
+        res.status(201).send({
+          success: true,
+          message: "User created successfully",
+          insertedId: result.insertedId,
+        });
+      } catch (error) {
+        console.error("User create error:", error);
+        res.status(500).send({
+          success: false,
+          message: "Failed to create user",
+        });
+      }
+    });
+
+    app.patch("/users/:id/role",  async (req, res) => {
+      try {
+        const id = req.params.id;
+        const { role } = req.body;
+        if (!role || !["admin", "user"].includes(role)) {
+          return res
+            .status(400)
+            .send({ success: false, message: "Invalid role" });
+        }
+        const query = { _id: new ObjectId(id) };
+        const update = { $set: { role } };
+        const result = await userCollection.updateOne(query, update);
+
+        if (result.modifiedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "User not found or role already set",
+          });
+        }
+
+        res.send({ success: true, message: `Role updated to ${role}` });
+      } catch (error) {
+        console.error("Role update error:", error);
+        res
+          .status(500)
+          .send({ success: false, message: "Failed to update role" });
+      }
+    });
+
+    app.delete("/users/:id",  async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        if (!id) {
+          return res
+            .status(400)
+            .send({ success: false, message: "User ID is required" });
+        }
+        const query = { _id: new ObjectId(id) };
+        const result = await userCollection.deleteOne(query);
+
+        if (result.deletedCount === 0) {
+          return res
+            .status(404)
+            .send({ success: false, message: "User not found" });
+        }
+        res.status(200).send({
+          success: true,
+          message: "User deleted successfully",
+          deletedCount: result.deletedCount,
+        });
+      } catch (error) {
+        console.error("Delete user error:", error);
+        res
+          .status(500)
+          .send({ success: false, message: "Failed to delete user" });
+      }
+    });
 
         app.get('/krishiLink', async (req, res) => {
             const result = await krishiLinkCollection.find().toArray()
@@ -115,30 +264,30 @@ async function run() {
 
 
         app.put('/krishiLink/:id/interest-status', async (req, res) => {
-            const { id } = req.params; 
+            const { id } = req.params;
             const { interestId, status } = req.body;
 
             try {
                 const product = await krishiLinkCollection.findOne({ _id: new ObjectId(id) });
                 if (!product) return res.status(404).send({ success: false, message: "Crop not found" });
 
-                
+
                 const interestIndex = product.interest.findIndex(
                     (item) => item._id.toString() === interestId
                 );
                 if (interestIndex === -1)
                     return res.status(404).send({ success: false, message: "Interest not found" });
 
-                
+
                 product.interest[interestIndex].status = status;
 
-             
+
                 if (status === "accepted") {
                     const interestedQty = Number(product.interest[interestIndex].quantity);
                     product.quantity = String(Math.max(0, Number(product.quantity) - interestedQty));
                 }
 
-               
+
                 const result = await krishiLinkCollection.updateOne(
                     { _id: new ObjectId(id) },
                     {
